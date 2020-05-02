@@ -1,0 +1,126 @@
+---
+title: "Betke-Briana-ADA-homework-3"
+author: "Briana Betke"
+date: "4/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Homework 3
+
+Let's start with reading in the appropriate packages for the assignment:
+```{r  message=FALSE}
+library(tidyverse)
+library(broom)
+library(cowplot)
+theme_set(theme_cowplot())
+```
+### Challenge 1:
+
+#### Step 1:
+Read in the Kamilar and Cooper dataset from online:
+```{r message=FALSE}
+# reading data
+f <- "https://raw.githubusercontent.com/difiore/ADA-datasets/master/KamilarAndCooperData.csv"
+d <- read_csv(f, col_names = TRUE)
+head(d,6) # just the first 6 so its not so much when knitted.
+```
+
+#### Fit the regression models
+Starting with untransformed:
+```{r}
+mod <- lm(MaxLongevity_m~Brain_Size_Species_Mean, data = d)
+tidy(mod) # model output, but nice
+```
+
+Now the transformed one:
+```{r}
+log_mod <- lm(log(MaxLongevity_m)~log(Brain_Size_Species_Mean), data = d)
+tidy(log_mod)
+```
+
+#### Superimpose line on ggplot and add model equation to the plot
+First, I wanted to take out the coefficients of the models to embed into the equation for the graph. So I save the tidy model output as a data frame then put them into the paste function to test how it would look. This took a while because I am bad with paste functions.....apparently. 
+```{r}
+values <- as.data.frame(tidy(mod)) # the data frame
+
+# testing the paste
+paste("longevity = ", paste(round(values$estimate[1],2), paste(round(values$estimate[2],2), "brain size", sep = "*"), sep=" + "), sep="")
+```
+
+transformed version
+```{r}
+log_values <- as.data.frame(tidy(log_mod))
+
+paste("longevity = ", paste(round(log_values$estimate[1],2), paste(round(log_values$estimate[2],2), "brain size", sep = "*"), sep=" + "), sep="")
+```
+
+Now on to ggplot! Adding the equation to the graph using the geom_text().
+```{r message=FALSE, warning=FALSE}
+mod_plot <- ggplot(d, aes(y = MaxLongevity_m, x = Brain_Size_Species_Mean)) +
+        geom_point()+
+        geom_smooth(method = "lm", color = "black", formula = y ~ x) + 
+        geom_text(x = 170, y = 950, size = 3, label = paste("longevity = ",
+                                                  paste(round(values$estimate[1],2),
+                                                        paste(round(values$estimate[2],2),
+                                                              "brain size", sep = "*"), sep=" + "), sep=""))
+
+log_mod_plot <- ggplot(d, aes(y = log(MaxLongevity_m), x = log(Brain_Size_Species_Mean))) +
+        geom_point()+
+        geom_smooth(method = "lm", color = "black", formula = y ~ x) + 
+        geom_text(x = 2.5, y = 6.60, size = 3, label = paste("longevity = ",
+                                                  paste(round(log_values$estimate[1],2),
+                                                        paste(round(log_values$estimate[2],2),
+                                                              "brain size", sep = "*"), sep=" + "), sep=""))
+# multiplot time 
+library(patchwork)
+mod_plot + log_mod_plot
+```
+
+#### Hypothesis test
+
+H0: There is no linear relationship (β1=0)
+HA: There is a linear relationship (β1≠0)
+
+The p-value for the explanatory variable is less than 0.05 and even siginificant at 0.10. Indicating that there is significant evidence of a linear relationship. 
+
+Viewing the model again, the estimate is 1.21. This can be interpreted as the increase in longevity for every 1 unit increase in mean brain size is 1.21, on average. 
+```{r}
+values
+log_values
+```
+
+90% CI for slope estimate untransformed:
+```{r}
+alpha <- 0.10
+(CI <- tidy(mod, conf.int = TRUE, conf.level = 1 - alpha))
+```
+
+90% CI for slope estimate untransformed:
+
+#### Add 90% CI and Prediction interval to plot
+```{r}
+
+```
+
+#### Point estimate
+```{r}
+
+
+```
+
+
+#### Looking @ the models, which is better and why?
+looking at dist of variables and residuals, make your case bro 
+
+scale_color_hue(labels = c("Fit", "CI", "PI")) 
+
+### Challenge 2:
+```{r}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
