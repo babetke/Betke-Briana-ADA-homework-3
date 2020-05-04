@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Homework 3
-
 Let's start with reading in the appropriate packages for the assignment:
 ```{r  message=FALSE}
 library(tidyverse)
@@ -19,10 +18,7 @@ library(cowplot)
 theme_set(theme_cowplot())
 ```
 
-### Challenge 1
-
-#### Step 1:
-Read in the Kamilar and Cooper dataset from online:
+An then read in the Kamilar and Cooper dataset from online:
 ```{r message=FALSE}
 # reading data
 f <- "https://raw.githubusercontent.com/difiore/ADA-datasets/master/KamilarAndCooperData.csv"
@@ -30,6 +26,16 @@ d <- read_csv(f, col_names = TRUE)
 head(d,3) # just the first 6 so its not so much when knitted.
 ```
 
+For challenge 1, I wanted to add the log transformed variables to the dataset.
+```{r}
+d <- d %>%
+  mutate(log_Maxlongevity_m = log(MaxLongevity_m), # mutate to add colmuns to the dataset
+         log_Brain_Size_Species_Mean = log(Brain_Size_Species_Mean))
+colnames(d) # just to look at the variable names
+```
+
+
+### Challenge 1  
 #### Fit the regression models
 Starting with untransformed:
 ```{r}
@@ -39,7 +45,7 @@ tidy(mod) # model output, but nice
 
 Now the transformed one:
 ```{r}
-log_mod <- lm(log(MaxLongevity_m)~log(Brain_Size_Species_Mean), data = d)
+log_mod <- lm(log_Maxlongevity_m~log_Brain_Size_Species_Mean, data = d)
 tidy(log_mod)
 ```
 
@@ -64,7 +70,7 @@ Now on to ggplot! Adding the equation to the graph using the geom_text().
 mod_plot <- ggplot(d, aes(y = MaxLongevity_m, x = Brain_Size_Species_Mean)) +
         geom_point()+
         geom_smooth(method = "lm", color = "black", formula = y ~ x) + 
-        geom_text(x = 170, y = 950, size = 3, label = paste("longevity = ",
+        geom_text(x = 220, y = 950, size = 3, label = paste("longevity = ",
                                                   paste(round(values$estimate[1],2),
                                                         paste(round(values$estimate[2],2),
                                                               "brain size", sep = "*"), sep=" + "), sep=""))
@@ -72,7 +78,7 @@ mod_plot <- ggplot(d, aes(y = MaxLongevity_m, x = Brain_Size_Species_Mean)) +
 log_mod_plot <- ggplot(d, aes(y = log(MaxLongevity_m), x = log(Brain_Size_Species_Mean))) +
         geom_point()+
         geom_smooth(method = "lm", color = "black", formula = y ~ x) + 
-        geom_text(x = 2.5, y = 6.60, size = 3, label = paste("longevity = ",
+        geom_text(x = 3.0, y = 6.60, size = 3, label = paste("longevity = ",
                                                   paste(round(log_values$estimate[1],2),
                                                         paste(round(log_values$estimate[2],2),
                                                               "brain size", sep = "*"), sep=" + "), sep=""))
@@ -88,9 +94,12 @@ HA: There is a linear relationship (β1≠0)
 
 The p-values for the explanatory variable in both models are less than 0.05.Indicating that there is significant evidence of a linear relationship.
 
-Viewing the model again, the estimate is 1.21. This can be interpreted as the increase in longevity for every 1 unit increase in mean brain size is 1.21, on average. 
+Transformed:  
+Viewing the model again, the estimate is 1.21. This can be interpreted as the increase in longevity for every 1 gm increase in mean brain size is 1.21, on average. 
 
-With the transformations, 
+With the transformations:  
+For every 1% increase in brain size, longevity increases 23%, on average. 
+
 ```{r}
 values
 log_values
@@ -100,6 +109,11 @@ log_values
 ```{r}
 alpha <- 0.10
 (CI <- tidy(mod, conf.int = TRUE, conf.level = 1 - alpha))
+```
+
+90% CI for slope estimate transformed:
+```{r}
+(CI <- tidy(log_mod, conf.int = TRUE, conf.level = 1 - alpha))
 ```
 
 #### Adding 90% CI and Prediction interval to scatter plot
@@ -139,7 +153,7 @@ mod_plot2 <- ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = MaxLongevity_
 The untransformed variable:
 ```{r warning=FALSE}
 log_ci <- predict(log_mod,
-  newdata = data.frame(Brain_Size_Species_Mean = log(d$Brain_Size_Species_Mean)),
+  newdata = data.frame(log_Brain_Size_Species_Mean = d$log_Brain_Size_Species_Mean),
   interval = "confidence", level = 1 - alpha
 )
 log_ci <- data.frame(log_ci)
@@ -148,7 +162,7 @@ names(log_ci) <- c("Brain_Size_Species_Mean", "c.fit", "c.lwr", "c.upr")
 
 # prediction interval 
 log_pi <- predict(log_mod,
-  newdata = data.frame(Brain_Size_Species_Mean = log(d$Brain_Size_Species_Mean)),
+  newdata = data.frame(log_Brain_Size_Species_Mean = d$log_Brain_Size_Species_Mean),
   interval = "prediction", level = 0.90
 ) 
 
@@ -156,7 +170,7 @@ log_pi <- data.frame(log_pi)
 log_pi <- cbind(log(d$Brain_Size_Species_Mean),log_pi)
 names(log_pi) <- c("Brain_Size_Species_Mean", "p.fit", "p.lwr", "p.upr")
 
-log_mod_plot2 <- ggplot(data = d, aes(x = log(Brain_Size_Species_Mean), y = log(MaxLongevity_m))) +
+log_mod_plot2 <- ggplot(data = d, aes(x = log_Brain_Size_Species_Mean, y = log_Maxlongevity_m)) +
   geom_point() +
   geom_line(data = log_ci, aes(x = Brain_Size_Species_Mean, y = c.fit, color = "Fit")) +
   geom_line(data = log_ci, aes(x = Brain_Size_Species_Mean, y = c.lwr, color = "CI")) +
@@ -181,7 +195,7 @@ pi_single
 Transformed model:
 ```{r}
 log_pi_single <- predict(log_mod,
-  newdata = data.frame(Brain_Size_Species_Mean = log(750)),
+  newdata = data.frame(log_Brain_Size_Species_Mean = log(750)),
   interval = "prediction", level = 0.90
 )
 log_pi_single
@@ -192,25 +206,24 @@ I would not trust the models to predict the logevity of this value accurately. L
 #### Looking @ the models, which is better and why?
 First, lets look at the residuals. For the untransformed data 
 ```{r}
+qqnorm(mod$residuals)
+qqline(mod$residuals, col = "red")
+
 plot(mod$fitted.values, mod$residuals, xlab = "Fitted Values", 
     ylab = "Residuals", main = "Residual Plot", pch = 20)
 abline(h = 0, col = "red")
-
-qqnorm(mod$residuals)
-hist(mod$residuals)
-
 ```
 
 ```{r}
+qqnorm(log_mod$residuals)
+qqline(log_mod$residuals, col = "red")
+
 plot(log_mod$fitted.values, log_mod$residuals, xlab = "Fitted Values", 
     ylab = "Residuals", main = "Residual Plot", pch = 20)
 abline(h = 0, col = "red")
-
-qqnorm(log_mod$residuals)
-hist(log_mod$residuals)
 ```
 
-The log seems to pass the core assumptions with the normality of residuals and equal variance. However, this throws me off a bit with how the predictions for the log appears. How it is curving away from the direction of the points, I find this to be odd. If I am just going off of residuals and assumptions, I would say that the log function would be the best as it corrects the normailty and equal variance assumptions.
+I would say that the model with the log transformed variables is better. The transformations seem to improve normality and equal varience of the residuals. 
 
 ### Challenge 2:
 
@@ -219,7 +232,7 @@ Run the lm:
 tidy(lm(log(HomeRange_km2)~log(Body_mass_female_mean), data = d))
 ```
 
-On to the boostrapping
+On to the boostrapping. I get now that I didn't have to go the list route...but I did...
 ```{r message=FALSE}
 # selecting columns for analysis for simplicity. Removing NAs because it seemed to solve my loop problems...?
 r <- d %>%
@@ -227,7 +240,6 @@ r <- d %>%
   drop_na()
 
 # Now set up the loop
-library(mosaic)
 k <- 1000
 n <- dim(r)[1]
 
@@ -235,7 +247,7 @@ s <- list(length = k)
 coef <- list(length = k)
 
 for (i in 1:k) {
-  s[[i]] <- sample(r, size = n, replace = TRUE)
+  s[[i]] <- sample_n(r, size = n, replace = TRUE)
   m <- s[[i]]
   model <- lm(log(HomeRange_km2) ~ log(Body_mass_female_mean), data = m)
   coef[[i]] <- model$coefficients
@@ -257,14 +269,14 @@ sd(boot_coef$boot_slope)
 For the intercept
 ```{r}
 alpha <- 0.05
-int_CI <- mean(boot_coef$boot_int) + c(-1, 1) * qnorm(1 - alpha / 2) * sd(boot_coef$boot_int)
+int_CI <- mean(boot_coef$boot_int) + c(-1, 1) * qt(1 - alpha / 2, df = n - 1) * sd(boot_coef$boot_int)
 names(int_CI) <- c("lower","upper")
 int_CI
 ```
 For the slope
 ```{r}
-slope_CI <- mean(boot_coef$boot_slope) + c(-1, 1) * qnorm(1 - alpha / 2) * sd(boot_coef$boot_slope)
-names(int_CI) <- c("lower","upper")
+slope_CI <- mean(boot_coef$boot_slope) + c(-1, 1) * qt(1 - alpha / 2, df = n - 1) * sd(boot_coef$boot_slope)
+names(slope_CI) <- c("lower","upper")
 slope_CI
 ```
 
@@ -279,16 +291,81 @@ confint(model)
 The standard errors and CIs for both coeffecients from the bootstrap are fairly close close to that of the single linear model. 
 
 ### Challenge 3
-#### write a function
-needs to take a dataframe  
-linear model  
-defined conf.interval  
-reps
+#### Write a function
+It took so long to make to boot part of the the boot_lm. So I didn't have time to combine my two functions...The first one gives the estimates, SE, and CI of the model alone and the second function is the boot function that only runs the bootstrapping and resturns results in a similar format but without the slope name....  
+So perhaps there was no point in makeing the first function. I intended to put it in the boot_lm and combine the tables.
 
 ```{r}
-boot_lm <- function(){
+lm_sum <-  function(d, model = "", conf.level = ""){
+  mod <- lm(model, d)
+  CI <- tidy(mod, conf.int = TRUE, conf.level = conf.level)
+  CI %>% select(term, estimate, std.error, conf.low, conf.high)
+}
+
+boot_lm <- function(d, model = "", reps = "", conf.level = ""){
   
+  # Setting up the boot strap
+  n <- dim(d)[1]
+  s <- list(length = reps)
+  coef <- list(length = reps)
+  
+  for (i in 1:reps) {
+    s[[i]] <- sample_n(d, size = n, replace = TRUE)
+    m <- s[[i]]
+    model <- lm(model, data = m) 
+    coef[[i]] <- model$coefficients
+  }
+  
+  # Turn the coefficients into a data frame
+  boot_Mat <- data.frame(matrix(unlist(coef), nrow=reps, byrow=T),stringsAsFactors=FALSE)
+  names(boot_Mat) <- c("boot_int","boot_slope")
+  
+  # Get the se for the slope and intercept
+  boot_slope_se <- sd(boot_Mat$boot_slope)
+  boot_int_se <- sd(boot_Mat$boot_int)
+  st.error <- rbind(boot_int_se, boot_slope_se)
+  
+  # CI of slope
+  slope_CI <- mean(boot_Mat$boot_slope) + c(-1, 1) * qt(conf.level / 2, df = n - 1) * boot_slope_se
+  names(slope_CI) <- c("conf.low","conf.high")
+  head(slope_CI)
+  
+  # CI for the intercept
+  int_CI <- mean(boot_Mat$boot_int) + c(-1, 1) * qt(conf.level / 2, df = n - 1) * boot_int_se
+  names(int_CI) <- c("conf.low","conf.high")
+  
+  # bind them
+  CIs <- rbind(int_CI,slope_CI)
+  
+  # Get the means of the coeffecients
+  boot_slope_m <- mean(boot_Mat$boot_slope)
+  boot_int_m <- mean(boot_Mat$boot_int)
+  estimate <- rbind (boot_int_m, boot_slope_m) # bind them 
+  
+  # Create data frame of mean coeffecients, se, and CI
+  results <- cbind(estimate,st.error,CIs)
+  resultd <- data.frame(results)
+  colnames(results) <- c("estimate","std.error","conf.low","conf.high")
+  rownames(results) <- c("intercept","slope")
+  return(results)
 }
 ```
 
+#### Use the function
+**Model 1:** log(HomeRange_km2) ~ log(Body_mass_female_mean)
+```{r}
+lm_sum(d, model = "log(HomeRange_km2) ~ log(Body_mass_female_mean)", conf.level = 0.95)
+boot_lm(d, model = "log(HomeRange_km2) ~ log(Body_mass_female_mean)", reps = 1000, conf.level = 0.95)
+```
+**Model 2:** log(DayLength_km) ~ log(Body_mass_female_mean)
+```{r}
+lm_sum(d, model = "log(DayLength_km) ~ log(Body_mass_female_mean)", conf.level = 0.95)
+boot_lm(d, model = "log(DayLength_km) ~ log(Body_mass_female_mean)", reps = 1000, conf.level = 0.95)
+```
 
+**Model 3:**  The last model, log(HomeRange_km2) ~ log(Body_mass_female_mean) + MeanGroupSize. *I have now realized the limits of my boot function....*
+```{r}
+log(HomeRange_km2) ~ log(Body_mass_female_mean) + MeanGroupSize
+lm_sum(d, model = "log(HomeRange_km2) ~ log(Body_mass_female_mean) + MeanGroupSize", conf.level = 0.95)
+boot_lm(d, model = "log(HomeRange_km2) ~ log(Body_mass_female_mean) + MeanGroupSize", reps = 1000, conf.level = 0.95)
+```
