@@ -18,7 +18,8 @@ library(broom)
 library(cowplot)
 theme_set(theme_cowplot())
 ```
-### Challenge 1:
+
+### Challenge 1
 
 #### Step 1:
 Read in the Kamilar and Cooper dataset from online:
@@ -26,7 +27,7 @@ Read in the Kamilar and Cooper dataset from online:
 # reading data
 f <- "https://raw.githubusercontent.com/difiore/ADA-datasets/master/KamilarAndCooperData.csv"
 d <- read_csv(f, col_names = TRUE)
-head(d,6) # just the first 6 so its not so much when knitted.
+head(d,3) # just the first 6 so its not so much when knitted.
 ```
 
 #### Fit the regression models
@@ -82,12 +83,14 @@ mod_plot + log_mod_plot
 
 #### Hypothesis test
 
-H0: There is no linear relationship (β1=0)
+H0: There is no linear relationship (β1=0)  
 HA: There is a linear relationship (β1≠0)
 
-The p-value for the explanatory variable is less than 0.05 and even siginificant at 0.10. Indicating that there is significant evidence of a linear relationship. 
+The p-values for the explanatory variable in both models are less than 0.05.Indicating that there is significant evidence of a linear relationship.
 
 Viewing the model again, the estimate is 1.21. This can be interpreted as the increase in longevity for every 1 unit increase in mean brain size is 1.21, on average. 
+
+With the transformations, 
 ```{r}
 values
 log_values
@@ -99,28 +102,193 @@ alpha <- 0.10
 (CI <- tidy(mod, conf.int = TRUE, conf.level = 1 - alpha))
 ```
 
-90% CI for slope estimate untransformed:
+#### Adding 90% CI and Prediction interval to scatter plot
+First with the untransformed variables: 
+```{r warning=FALSE}
+ci <- predict(mod,
+  newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean),
+  interval = "confidence", level = 1 - alpha
+)
+ci <- data.frame(ci)
+ci <- cbind(d$Brain_Size_Species_Mean,ci)
+names(ci) <- c("Brain_Size_Species_Mean", "c.fit", "c.lwr", "c.upr")
 
-#### Add 90% CI and Prediction interval to plot
-```{r}
+# prediction interval 
+pi <- predict(mod,
+  newdata = data.frame(Brain_Size_Species_Mean = d$Brain_Size_Species_Mean),
+  interval = "prediction", level = 0.90
+) 
 
+pi <- data.frame(pi)
+pi <- cbind(d$Brain_Size_Species_Mean,pi)
+names(pi) <- c("Brain_Size_Species_Mean", "p.fit", "p.lwr", "p.upr")
+
+mod_plot2 <- ggplot(data = d, aes(x = Brain_Size_Species_Mean, y = MaxLongevity_m)) +
+  geom_point() +
+  geom_line(data = ci, aes(x = Brain_Size_Species_Mean, y = c.fit, color = "Fit")) +
+  geom_line(data = ci, aes(x = Brain_Size_Species_Mean, y = c.lwr, color = "CI")) +
+  geom_line(data = ci, aes(x = Brain_Size_Species_Mean, y = c.upr, color = "CI")) +
+  geom_line(data = pi, aes(x = Brain_Size_Species_Mean, y = p.lwr, color = "PI")) +
+  geom_line(data = pi, aes(x = Brain_Size_Species_Mean, y = p.upr, color = "PI"))
+
+(mod_plot_2 <- mod_plot2 + scale_color_manual(name = "lines",
+                        breaks = c("Fit", "CI", "PI"),
+                        values = c("Fit" = "black", "CI" = "blue", "PI" = "red")))
+```
+
+The untransformed variable:
+```{r warning=FALSE}
+log_ci <- predict(log_mod,
+  newdata = data.frame(Brain_Size_Species_Mean = log(d$Brain_Size_Species_Mean)),
+  interval = "confidence", level = 1 - alpha
+)
+log_ci <- data.frame(log_ci)
+log_ci <- cbind(log(d$Brain_Size_Species_Mean),log_ci)
+names(log_ci) <- c("Brain_Size_Species_Mean", "c.fit", "c.lwr", "c.upr")
+
+# prediction interval 
+log_pi <- predict(log_mod,
+  newdata = data.frame(Brain_Size_Species_Mean = log(d$Brain_Size_Species_Mean)),
+  interval = "prediction", level = 0.90
+) 
+
+log_pi <- data.frame(log_pi)
+log_pi <- cbind(log(d$Brain_Size_Species_Mean),log_pi)
+names(log_pi) <- c("Brain_Size_Species_Mean", "p.fit", "p.lwr", "p.upr")
+
+log_mod_plot2 <- ggplot(data = d, aes(x = log(Brain_Size_Species_Mean), y = log(MaxLongevity_m))) +
+  geom_point() +
+  geom_line(data = log_ci, aes(x = Brain_Size_Species_Mean, y = c.fit, color = "Fit")) +
+  geom_line(data = log_ci, aes(x = Brain_Size_Species_Mean, y = c.lwr, color = "CI")) +
+  geom_line(data = log_ci, aes(x = Brain_Size_Species_Mean, y = c.upr, color = "CI")) +
+  geom_line(data = log_pi, aes(x = Brain_Size_Species_Mean, y = p.lwr, color = "PI")) +
+  geom_line(data = log_pi, aes(x = Brain_Size_Species_Mean, y = p.upr, color = "PI"))
+(log_mod_pot2 <- log_mod_plot2 + scale_color_manual(name = "lines",
+                        breaks = c("Fit", "CI", "PI"),
+                        values = c("Fit" = "black", "CI" = "blue", "PI" = "red")))
 ```
 
 #### Point estimate
+Untransformed model
 ```{r}
-
-
+pi_single <- predict(mod,
+  newdata = data.frame(Brain_Size_Species_Mean = 750),
+  interval = "prediction", level = 0.90
+)
+pi_single
 ```
 
+Transformed model:
+```{r}
+log_pi_single <- predict(log_mod,
+  newdata = data.frame(Brain_Size_Species_Mean = log(750)),
+  interval = "prediction", level = 0.90
+)
+log_pi_single
+```
+
+I would not trust the models to predict the logevity of this value accurately. Looking at the maximum value of brain size for the variable, 750 gm is not a value contained in the dataset. The highest value in the dataset is 491.27 gm. Using this value in the model would be considered extrapolation as this is applying a value outside of the range of the observed data in which the model was generated.
 
 #### Looking @ the models, which is better and why?
-looking at dist of variables and residuals, make your case bro 
-
-scale_color_hue(labels = c("Fit", "CI", "PI")) 
-
-### Challenge 2:
+First, lets look at the residuals. For the untransformed data 
 ```{r}
+plot(mod$fitted.values, mod$residuals, xlab = "Fitted Values", 
+    ylab = "Residuals", main = "Residual Plot", pch = 20)
+abline(h = 0, col = "red")
+
+qqnorm(mod$residuals)
+hist(mod$residuals)
 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+plot(log_mod$fitted.values, log_mod$residuals, xlab = "Fitted Values", 
+    ylab = "Residuals", main = "Residual Plot", pch = 20)
+abline(h = 0, col = "red")
+
+qqnorm(log_mod$residuals)
+hist(log_mod$residuals)
+```
+
+The log seems to pass the core assumptions with the normality of residuals and equal variance. However, this throws me off a bit with how the predictions for the log appears. How it is curving away from the direction of the points, I find this to be odd. If I am just going off of residuals and assumptions, I would say that the log function would be the best as it corrects the normailty and equal variance assumptions.
+
+### Challenge 2:
+
+Run the lm:
+```{r}
+tidy(lm(log(HomeRange_km2)~log(Body_mass_female_mean), data = d))
+```
+
+On to the boostrapping
+```{r message=FALSE}
+# selecting columns for analysis for simplicity. Removing NAs because it seemed to solve my loop problems...?
+r <- d %>%
+  select(HomeRange_km2, Body_mass_female_mean) %>%
+  drop_na()
+
+# Now set up the loop
+library(mosaic)
+k <- 1000
+n <- dim(r)[1]
+
+s <- list(length = k)
+coef <- list(length = k)
+
+for (i in 1:k) {
+  s[[i]] <- sample(r, size = n, replace = TRUE)
+  m <- s[[i]]
+  model <- lm(log(HomeRange_km2) ~ log(Body_mass_female_mean), data = m)
+  coef[[i]] <- model$coefficients
+}
+
+boot_coef <- data.frame(matrix(unlist(coef), nrow=k, byrow=T),stringsAsFactors=FALSE)
+names(boot_coef) <- c("boot_int","boot_slope")
+
+hist(boot_coef$boot_int)
+hist(boot_coef$boot_slope)
+```
+
+#### standard error
+```{r}
+sd(boot_coef$boot_int)
+sd(boot_coef$boot_slope)
+```
+#### CI
+For the intercept
+```{r}
+alpha <- 0.05
+int_CI <- mean(boot_coef$boot_int) + c(-1, 1) * qnorm(1 - alpha / 2) * sd(boot_coef$boot_int)
+names(int_CI) <- c("lower","upper")
+int_CI
+```
+For the slope
+```{r}
+slope_CI <- mean(boot_coef$boot_slope) + c(-1, 1) * qnorm(1 - alpha / 2) * sd(boot_coef$boot_slope)
+names(int_CI) <- c("lower","upper")
+slope_CI
+```
+
+#### how do they compare to the model?
+Model confidence intervals
+```{r}
+model <- lm(log(HomeRange_km2)~log(Body_mass_female_mean), data = d) 
+tidy(model)
+confint(model)
+```
+
+The standard errors and CIs for both coeffecients from the bootstrap are fairly close close to that of the single linear model. 
+
+### Challenge 3
+#### write a function
+needs to take a dataframe  
+linear model  
+defined conf.interval  
+reps
+
+```{r}
+boot_lm <- function(){
+  
+}
+```
+
+
