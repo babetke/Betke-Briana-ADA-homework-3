@@ -95,7 +95,7 @@ HA: There is a linear relationship (β1≠0)
 The p-values for the explanatory variable in both models are less than 0.05.Indicating that there is significant evidence of a linear relationship.
 
 Transformed:  
-Viewing the model again, the estimate is 1.21. This can be interpreted as the increase in longevity for every 1 gm increase in mean brain size is 1.21, on average. 
+Viewing the model again, the estimate is 1.21. This can be interpreted as the increase in longevity (in months) for every 1 gm increase in mean brain size is 1.21, on average. 
 
 With the transformations:  
 For every 1% increase in brain size, longevity increases 23%, on average. 
